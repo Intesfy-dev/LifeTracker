@@ -1,6 +1,9 @@
 # Life Tracker⏱️
-Aplicație C++ de organizare personală. Include: 1. Money Tracker (venituri, cheltuieli, abonamente și economii), 2. Calendar sincronizat cu Google Calendar, 3. Smart Task Tracker (prioritizare prin comparații binare și urgență) și 4. Roadmap Creator (arbore vizual de obiective).
----
+> [!NOTE]
+> **Descriere**
+> Aici pui descrierea mecanismului de prioritizare binară.
+** Aplicație C++ de organizare personală. Include: 1. Money Tracker (venituri, cheltuieli, abonamente și economii), 2. Calendar sincronizat cu Google Calendar, 3. Smart Task Tracker (prioritizare prin comparații binare și urgență) și 4. Roadmap Creator (arbore vizual de obiective).
+** ---
 ### Tema 0
 
 - [x] Nume proiect
