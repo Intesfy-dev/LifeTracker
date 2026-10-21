@@ -1,40 +1,11 @@
-# Nu primesc notă pentru că nu am pus titlu și descriere
-
-### Folosiți template-ul corespunzător grupei voastre!
-
-| Laborant  | Link template                                |
-|-----------|----------------------------------------------|
-| Dragoș B  | https://github.com/Ionnier/oop-template      |
-| Tiberiu M | https://github.com/MaximTiberiu/oop-template |
-| Marius MC | https://github.com/mcmarius/oop-template     |
-
-### Important!
-
-Aveți voie cu agenți care generează cod doar dacă păstrați AGENTS.md și de `.internal/` *pe toată durata semestrului*.
-Știm că se poate trișa foarte ușor. Ideea nu este să învățați să trișați mai bine, ci să înțelegeți ce faceți.
-Codul generat pus "ca să fie"/pe care nu îl înțelegeți nu se punctează.
-
-Codul din proiect trebuie să poată fi ușor de înțeles și de modificat de către altcineva. Pentru detalii, veniți la ore.
-
-O cerință nu se consideră îndeplinită dacă este realizată doar prin cod generat.
-
-- **Fără cod de umplutură/fără sens!**
-- **Fără copy-paste!**
-- **Fără variabile globale!**
-- **Fără atribute publice!**
-- **Fără date în cod!** Datele vor fi citite din fișier, rețea sau bază de date, aveți exemple destule.
-- **Obligatoriu** fișiere cu date mai multe din care să citiți, obligatoriu cu biblioteci externe: fișiere (local sau server) sau baze de date
-- obligatoriu (TBD) să integrați cel puțin două biblioteci externe pe lângă cele pentru stocare
-
-**NOU!** Livrabile pentru toate temele:
-- aplicație
-- bibliotecă
-- interfața publică pentru bibliotecă
+# Life Tracker⏱️
+---
+Aplicație C++ de organizare personală. Include: 1. Money Tracker (venituri, cheltuieli, abonamente și economii), 2. Calendar sincronizat cu Google Calendar, 3. Smart Task Tracker (prioritizare prin comparații binare și urgență) și 4. Roadmap Creator (arbore vizual de obiective).
 
 ### Tema 0
 
-- [ ] Nume proiect (poate fi schimbat ulterior)
-- [ ] Scurtă descriere a temei alese, ce v-ați propus să implementați
+- [x] Nume proiect
+- [x] Scurtă descriere a temei alese, ce v-ați propus să implementați
 
 ## Tema 1
 
