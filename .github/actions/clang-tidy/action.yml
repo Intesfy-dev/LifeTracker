@@ -1,0 +1,31 @@
+name: 'Run clang-tidy'
+description: 'Install and run clang-tidy'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install clang-tidy
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends clang-tidy-${{ env.CLANG_VER }} libc++-${{ env.CLANG_VER }}-dev libc++abi-${{ env.CLANG_VER }}-dev ninja-build
+
+    - name: Configure CMake
+      uses: ./.github/actions/configure-cmake
+      with:
+        custom_flags: '-GNinja'
+        cache_key: 'cache-clang-tidy'
+
+    - name: Clang-Tidy
+      continue-on-error: true
+      shell: bash
+      # clang-tidy is not able to follow symbolic links: https://bugs.llvm.org/show_bug.cgi?id=47460
+      # need to use | as sed separator because / is used in paths
+      run: |
+        sed -i "s|$(which ${CXX})|$(realpath $(which ${CXX}))|g" "${BUILD_DIR}"/compile_commands.json
+
+        cat "${BUILD_DIR}"/compile_commands.json |
+          jq -r '.[] | .file' |                    # select source file paths from CMake project; -r to strip quotes
+          grep -v "/${BUILD_DIR}/_deps/" |         # ignore external dependencies
+          grep -v "/${EXT_DIR}/" |                 # ignore external vendored dependencies
+          xargs clang-tidy-${{ env.CLANG_VER }} -p "${BUILD_DIR}"

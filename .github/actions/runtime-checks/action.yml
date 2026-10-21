@@ -1,0 +1,50 @@
+name: 'Runtime checks'
+description: 'Run dynamic analysis tools'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Sanitizers
+      shell: bash
+      # run one sanitizer for each env to avoid building extra binaries on one env
+      if: matrix.runs_asan == true && runner.os != 'Windows'
+      # detect_leaks is not supported on macOS
+      # env:
+      #   ASAN_OPTIONS: detect_leaks=1
+      run: |
+        cd "${{ env.ZIP_NAME }}" && \
+          cat "${INPUT_FILENAME}" | tr -d '\r' | ./"${EXECUTABLE_NAME}" && \
+          ./"${TESTS_EXECUTABLE_NAME}" && echo "All tests pass"
+
+    - name: Sanitizers (Windows MSVC)
+      shell: bash
+      # run one sanitizer for each OS to avoid building extra binaries
+      if: matrix.cxx == 'cl' && matrix.runs_asan == true
+      continue-on-error: true
+      run: |
+        cd "${{ env.ZIP_NAME }}" && \
+          cat "${INPUT_FILENAME}" | ./"${EXECUTABLE_NAME}".exe && \
+          ./"${TESTS_EXECUTABLE_NAME}".exe && echo "All tests pass"
+
+    - name: Valgrind
+      shell: bash
+      if: runner.os == 'Linux' && matrix.runs_valgrind == true
+      run: |
+        cd "${{ env.ZIP_NAME }}" && bash ../scripts/run_valgrind.sh .
+
+    - name: Smoke test
+      # until we have a proper test env, we cannot fix ASan reliably
+      shell: bash
+      if: runner.os != 'Windows' && (runner.os == 'macOS' || (matrix.runs_asan != true && matrix.runs_valgrind != true))
+      run: |
+        cd "${{ env.ZIP_NAME }}" && \
+          cat "${INPUT_FILENAME}" | tr -d '\r' | ./"${EXECUTABLE_NAME}" && \
+          ./"${TESTS_EXECUTABLE_NAME}" && echo "All tests pass"
+
+    - name: Smoke test (Windows)
+      shell: bash
+      if: runner.os == 'Windows' && matrix.runs_asan != true
+      run: |
+        cd "${{ env.ZIP_NAME }}" && \
+          cat "${INPUT_FILENAME}" | tr -d '\r' | ./"${EXECUTABLE_NAME}".exe && \
+          ./"${TESTS_EXECUTABLE_NAME}".exe && echo "All tests pass"

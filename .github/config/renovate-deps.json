@@ -1,0 +1,73 @@
+{
+  "recreateWhen": "always",
+  "enabledManagers": ["regex"],
+  "baseBranches": [
+    "baze-de-date/pqxx",
+    "baze-de-date/sqlite",
+    "common-libs",
+    "descarcare-date-api",
+    "ftxui",
+    "http-server",
+    "llms",
+    "main",
+    "raylib-cpp",
+    "sfml3",
+    "sfml3-imagini-externe-api",
+    "tests/Boost-ext-ut",
+    "tests/gtest",
+    "wxwidgets"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        ".github/workflows/*.yml",
+        "CMakeLists.txt",
+        "README.md",
+        "tests/CMakeLists.txt",
+        "scripts/*.sh"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+?) depName=(?<depName>\\S+?) versioning=(?<versioning>\\S+?)\\s+.*=(?<currentValue>\\S+)",
+        "# renovate: datasource=(?<datasource>\\S+?) depName=(?<depName>\\S+?) versioning=(?<versioning>\\S+?)\\s+.*: \"(?<currentValue>\\S+)\"",
+        "# renovate: datasource=(?<datasource>\\S+?) depName=(?<depName>\\S+?) versioning=(?<versioning>\\S+?)\\s+GIT_TAG\\s+(?<currentValue>\\S+)",
+        "# renovate: datasource=(?<datasource>\\S+?) depName=(?<depName>\\S+?) versioning=(?<versioning>\\S+?)\\s+#\\s*GIT_TAG\\s+[0-9a-fA-F]{40}\\s+#\\s*(?<currentValue>\\S+)",
+        "<!--\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s+versioning=(?<versioning>\\S+)\\s*-->\\s*-\\s*Versiune:\\s*\\[v*(?<currentValue>[^\\]]+)\\]\\([^\\)]+\\)",
+        "<!--\\s+renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) versioning=(?<versioning>\\S+)\\s+-->\\s+.*\\/tree\\/(?<currentValue>\\S+)\\)"
+      ],
+      "datasourceTemplate": "{{{datasource}}}",
+      "depNameTemplate": "{{{depName}}}",
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}"
+    },
+    {
+      "customType": "regex",
+      "description": "Keep the commented '# GIT_TAG <sha> # <tag>' pin in sync with the newest tag",
+      "managerFilePatterns": ["CMakeLists.txt"],
+      "matchStrings": [
+        "# renovate: depName=(?<depName>\\S+)\\s+# GIT_TAG\\s+(?<currentDigest>[a-z0-9]{40}) # (?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "git-tags",
+      "depNameTemplate": "{{{depName}}}",
+      "packageNameTemplate": "https://github.com/{{{depName}}}",
+      "versioningTemplate": "loose"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDepNames": ["wxWidgets/wxWidgets"],
+      "description": "Keep the wx tag bump and the commented # GIT_TAG SHA in a single PR (Renovate otherwise splits digest updates onto their own <name>-digest branch)",
+      "groupName": "Update wxWidgets"
+    },
+    {
+      "matchDepNames": ["SFML/SFML"],
+      "description": "Keep the SFML tag bump and the commented # GIT_TAG SHA in a single PR (Renovate otherwise splits digest updates onto their own <name>-digest branch)",
+      "groupName": "Update SFML"
+    },
+    {
+      "matchDepNames": ["raysan5/raylib", "RobLoach/raylib-cpp"],
+      "groupName": "Update raylib"
+    } 
+  ],
+  "prConcurrentLimit": 0,
+  "prHourlyLimit": 0
+}

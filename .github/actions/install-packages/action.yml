@@ -1,0 +1,20 @@
+name: 'Install packages'
+description: 'Install required packages'
+
+runs:
+  using: "composite"
+  steps:
+    # Common Linux dependencies
+    - name: Install Linux Dependencies
+      shell: bash
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install ninja-build
+
+    - name: Install valgrind
+      shell: bash
+      if: runner.os == 'Linux' && matrix.runs_valgrind == true
+      run: |
+        # sudo apt-get update
+        sudo apt-get install --no-install-recommends valgrind
