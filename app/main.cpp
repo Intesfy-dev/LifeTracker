@@ -19,7 +19,6 @@ class date{
       return (month == 2 && leap()) ? 29 : dm[month - 1];
     }
 
-    
     int to_days() const {
       int y = year - 1, days = y * 365 + y / 4 - y / 100 + y / 400;
       for(int m = 1; m < month; m++)
@@ -41,7 +40,20 @@ class date{
       return date{1, 1, year + 1};
     }
 
+    date next_billing(const date& today) const {
+      int max_d = date{1, today.month, today.year}.days_in_month();
+      date due{std::min(day, max_d), today.month, today.year};
+      if(today.days_until(due) > 0) return due;
+      int nm = today.month == 12 ? 1 : today.month + 1;
+      int ny = today.month == 12 ? today.year + 1 : today.year;
+      return date{std::min(day, date{1, nm, ny}.days_in_month()), nm, ny};
+    }
+
+    bool same_day(const date& o) const { return day == o.day && month == o.month && year == o.year; }
+    bool same_week(const date& o) const { int diff = days_until(o); return diff >= 0 && diff < 7; }
     bool same_month(const date& o) const { return month == o.month && year == o.year; }
+    bool same_year(const date& o) const { return year == o.year; }
+    int ics_code() const { return year * 10000 + month * 100 + day; }
 
     friend std::istream& operator>>(std::istream& is, date& d){
       int dd = 1, mm = 1, yy = 2026;
@@ -64,8 +76,8 @@ class transaction{
     category cat;
     date date_transaction;
     double amount;
-    bool membership;  
-    bool win;           
+    bool membership;
+    bool win;
 
     bool is_income() const { return cat == category::salary || cat == category::bonus; }
 
@@ -76,11 +88,16 @@ class transaction{
   public:
     explicit transaction(const std::string& ti = "unspecified", category c = category::other, const date& z = date{}, double am = 0, bool mem = false, bool w = false) : title{ti}, cat{c}, date_transaction{z}, amount{am}, membership{mem}, win{w}{}
 
+    const std::string& get_title() const { return title; }
     std::string category_name() const { return names()[static_cast<std::size_t>(cat)]; }
 
     double signed_amount() const { return is_income() ? amount : -amount; }
     bool is_membership() const { return membership; }
+    bool in_day(const date& d) const { return date_transaction.same_day(d); }
+    bool in_week(const date& d) const { return date_transaction.same_week(d); }
     bool in_month(const date& d) const { return date_transaction.same_month(d); }
+    bool in_year(const date& d) const { return date_transaction.same_year(d); }
+    date next_billing_date(const date& today) const { return date_transaction.next_billing(today); }
 
     friend std::istream& operator>>(std::istream& is, transaction& t){
       std::string cat_name;
@@ -130,7 +147,7 @@ class task{
 
   private:
     std::string title, description;
-    int urgency;       
+    int urgency;
     date task_deadline;
     double progress;
     bool done, missed;
@@ -145,9 +162,11 @@ class task{
     explicit task(const std::string& ti = "unspecified", const std::string& desc = "unspecified", int u = 3, const date& t_d = date{}, double p = 0, bool d = false, bool m = false) : title{ti}, description{desc}, urgency{std::clamp(u, 1, max_level)}, task_deadline{t_d}, progress{p}, done{d}, missed{m}{}
 
     const std::string& get_title() const { return title; }
+    const date& get_deadline() const { return task_deadline; }
     bool is_done() const { return done; }
     bool is_missed() const { return missed; }
     bool has_level(int l) const { return urgency == l && !done; }
+    int deadline_diff(const task& o) const { return task_deadline.days_until(o.task_deadline); }
 
     void finish(){
       done = true;
@@ -164,7 +183,6 @@ class task{
       if(!done && days_left(today) < 0) missed = true;
     }
 
-    
     bool more_urgent(const task& o) const {
       if(done != o.done) return !done;
       return urgency < o.urgency;
@@ -202,6 +220,21 @@ class budget{
       left = total - lost;
     }
 
+    void report_range(const std::string& label, const date& d, int mode) const {
+      double earned = 0, spent = 0, biggest = 0;
+      for(const auto& t : transactions){
+        bool match = (mode == 0 && t.in_day(d)) || (mode == 1 && t.in_week(d)) || (mode == 2 && t.in_month(d)) || (mode == 3 && t.in_year(d));
+        if(!match) continue;
+        double s = t.signed_amount();
+        if(s > 0) earned += s;
+        else{
+          spent -= s;
+          biggest = std::max(biggest, -s);
+        }
+      }
+      std::cout << label << " report: earned " << earned << ", spent " << spent << ", saved " << earned - spent << ", biggest expense " << biggest << "\n";
+    }
+
   public:
     explicit budget(double t = 0, const std::vector<transaction>& tr = {}, const std::vector<money_goal>& go = {}) : total{t}, left{t}, lost{0}, transactions{tr}, goals{go}{
       for(const auto& x : transactions) update(x);
@@ -212,11 +245,13 @@ class budget{
     }
 
     budget& operator=(const budget& o){
-      total = o.total;
-      left = o.left;
-      lost = o.lost;
-      transactions = o.transactions;
-      goals = o.goals;
+      if(this != &o){
+        total = o.total;
+        left = o.left;
+        lost = o.lost;
+        transactions = o.transactions;
+        goals = o.goals;
+      }
       std::cout << "[budget operator=]\n";
       return *this;
     }
@@ -237,18 +272,27 @@ class budget{
       return sum;
     }
 
-    void monthly_report(const date& d) const {
-      double earned = 0, spent = 0, biggest = 0;
+    void subscriptions_status(const date& today) const {
+      double reserve = 0;
+      std::cout << "Subscriptions tracker:\n";
       for(const auto& t : transactions){
-        if(!t.in_month(d)) continue;
-        double s = t.signed_amount();
-        if(s > 0) earned += s;
-        else{
-          spent -= s;
-          biggest = std::max(biggest, -s);
-        }
+        if(!t.is_membership() || t.signed_amount() >= 0) continue;
+        double cost = -t.signed_amount();
+        date due = t.next_billing_date(today);
+        int days = std::max(1, today.days_until(due));
+        reserve += cost;
+        std::cout << "  " << t.get_title() << ": " << cost << " due on " << due << " (" << days << " days left, set aside " << cost / days << "/day)\n";
       }
-      std::cout << "Month report: earned " << earned << ", spent " << spent << ", saved " << earned - spent << ", biggest expense " << biggest << "\n";
+      std::cout << "  Total to keep aside for subscriptions: " << reserve << " (available after reserve: " << left - reserve << ")\n";
+    }
+
+    void monthly_report(const date& d) const { report_range("Month", d, 2); }
+
+    void period_report(const date& d) const {
+      report_range("Day", d, 0);
+      report_range("Week", d, 1);
+      report_range("Month", d, 2);
+      report_range("Year", d, 3);
     }
 
     void category_report(const date& d) const {
@@ -284,13 +328,14 @@ class task_tracker{
     int total, done, tbd, missed;
     std::vector<task> tasks;
 
-    
     static bool higher(const task& a, const task& b){
-      std::cout << "Is \"" << a.get_title() << "\" higher or lower than \"" << b.get_title() << "\" on the list? (1 = higher, 2 = lower): ";
-      int ans = 0;
-      while(ans != 1 && ans != 2){
+      int diff = a.deadline_diff(b);
+      std::cout << "Compare [" << a.get_title() << " | due " << a.get_deadline() << "] vs [" << b.get_title() << " | due " << b.get_deadline() << "] (deadline diff: " << (diff >= 0 ? "+" : "") << diff << " days)\n";
+      std::cout << "Is \"" << a.get_title() << "\" more important than \"" << b.get_title() << "\"? (1 = yes, 0 = no): ";
+      int ans = -1;
+      while(ans != 1 && ans != 0 && ans != 2){
         if(!(std::cin >> ans)){
-          if(std::cin.eof()) ans = 2;
+          if(std::cin.eof()) ans = 0;
           else{
             std::cin.clear();
             std::cin.ignore(1000, '\n');
@@ -338,7 +383,6 @@ class task_tracker{
 
     double completion() const { return total ? done * 100.0 / total : 0; }
 
-   
     void rank_level(int level){
       if(level < 1 || level > task::levels()){
         std::cout << "Invalid level\n";
@@ -363,7 +407,6 @@ class task_tracker{
       tasks = others;
     }
 
-    
     std::vector<task> prioritize() const {
       std::vector<task> sorted = tasks;
       std::stable_sort(sorted.begin(), sorted.end(), [](const task& a, const task& b){ return a.more_urgent(b); });
@@ -373,6 +416,269 @@ class task_tracker{
     friend std::ostream& operator<<(std::ostream& os, const task_tracker& tt){
       os << "Tasks: " << tt.total << " total, " << tt.done << " done, " << tt.tbd << " to do, " << tt.missed << " missed\n";
       for(const auto& t : tt.tasks) os << "  " << t;
+      return os;
+    }
+};
+
+class calendar_event{
+
+  private:
+    std::string title;
+    date event_date;
+    int start_hour, duration_min;
+    bool synced;
+
+    int end_minutes() const { return start_hour * 60 + duration_min; }
+
+  public:
+    explicit calendar_event(const std::string& ti = "unspecified", const date& d = date{}, int sh = 9, int dur = 60, bool sy = false) : title{ti}, event_date{d}, start_hour{std::clamp(sh, 0, 23)}, duration_min{std::max(15, dur)}, synced{sy}{}
+
+    const std::string& get_title() const { return title; }
+    const date& get_date() const { return event_date; }
+    bool is_synced() const { return synced; }
+
+    void mark_synced(){ synced = true; }
+
+    void reschedule(const date& d, int sh){
+      event_date = d;
+      start_hour = std::clamp(sh, 0, 23);
+      synced = false;
+    }
+
+    bool overlaps(const calendar_event& o) const {
+      if(!event_date.same_day(o.event_date)) return false;
+      return start_hour * 60 < o.end_minutes() && o.start_hour * 60 < end_minutes();
+    }
+
+    void write_ics(std::ostream& os) const {
+      os << "BEGIN:VEVENT\nSUMMARY:" << title << "\nDTSTART:" << event_date.ics_code() << "T" << (start_hour < 10 ? "0" : "") << start_hour << "0000\nDURATION:PT" << duration_min << "M\nEND:VEVENT\n";
+    }
+
+    friend std::istream& operator>>(std::istream& is, calendar_event& e){
+      char sep = ',';
+      std::getline(is, e.title, ',');
+      if(is >> e.event_date >> sep >> e.start_hour >> sep >> e.duration_min >> sep >> e.synced){
+        e.start_hour = std::clamp(e.start_hour, 0, 23);
+        e.duration_min = std::max(15, e.duration_min);
+      }
+      return is;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const calendar_event& e){
+      return os << e.title << " | " << e.event_date << " at " << e.start_hour << ":00 (" << e.duration_min << "m) | " << (e.synced ? "google-synced" : "local-modified") << "\n";
+    }
+};
+
+class calendar{
+
+  private:
+    std::string google_account;
+    std::vector<calendar_event> events;
+
+    bool has_conflict(const calendar_event& ev) const {
+      for(const auto& x : events)
+        if(x.overlaps(ev)) return true;
+      return false;
+    }
+
+  public:
+    explicit calendar(const std::string& acc = "user@gmail.com", const std::vector<calendar_event>& ev = {}) : google_account{acc}, events{ev}{}
+
+    bool add_event(const calendar_event& e){
+      bool clash = has_conflict(e);
+      if(clash) std::cout << "Calendar conflict detected for: " << e.get_title() << "\n";
+      events.push_back(e);
+      return !clash;
+    }
+
+    bool modify_event(const std::string& title, const date& new_date, int new_hour){
+      for(auto& e : events)
+        if(e.get_title() == title){
+          e.reschedule(new_date, new_hour);
+          return true;
+        }
+      return false;
+    }
+
+    int detect_conflicts() const {
+      int count = 0;
+      for(std::size_t i = 0; i < events.size(); i++)
+        for(std::size_t j = i + 1; j < events.size(); j++)
+          if(events[i].overlaps(events[j])){
+            std::cout << "  Conflict: \"" << events[i].get_title() << "\" overlaps with \"" << events[j].get_title() << "\" on " << events[i].get_date() << "\n";
+            count++;
+          }
+      return count;
+    }
+
+    void week_agenda(const date& today) const {
+      std::cout << "Week agenda (" << google_account << "):\n";
+      for(const auto& e : events){
+        int d = today.days_until(e.get_date());
+        if(d >= 0 && d < 7) std::cout << "  " << e;
+      }
+    }
+
+    int sync_google(const std::string& ics_path){
+      std::ofstream out{ics_path};
+      out << "BEGIN:VCALENDAR\nVERSION:2.0\nX-WR-CALNAME:" << google_account << "\n";
+      int pushed = 0;
+      for(auto& e : events){
+        if(!e.is_synced()){
+          e.mark_synced();
+          pushed++;
+        }
+        e.write_ics(out);
+      }
+      out << "END:VCALENDAR\n";
+      std::cout << "Google Calendar sync (" << google_account << "): pushed " << pushed << " updates to " << ics_path << "\n";
+      return pushed;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const calendar& c){
+      os << "Calendar (" << c.google_account << ", " << c.events.size() << " events):\n";
+      for(const auto& e : c.events) os << "  " << e;
+      return os;
+    }
+};
+
+class roadmap_node{
+
+  private:
+    int id, parent_id;
+    std::string title;
+    double weight;
+    bool done;
+
+  public:
+    explicit roadmap_node(int i = 1, int p = 0, const std::string& ti = "unspecified", double w = 1.0, bool d = false) : id{i}, parent_id{p}, title{ti}, weight{std::max(0.1, w)}, done{d}{}
+
+    int get_id() const { return id; }
+    int get_parent() const { return parent_id; }
+    const std::string& get_title() const { return title; }
+    double get_weight() const { return weight; }
+    bool is_done() const { return done; }
+    void finish(){ done = true; }
+
+    friend std::istream& operator>>(std::istream& is, roadmap_node& n){
+      char sep = ',';
+      if(is >> n.id >> sep >> n.parent_id >> sep){
+        std::getline(is, n.title, ',');
+        is >> n.weight >> sep >> n.done;
+        n.weight = std::max(0.1, n.weight);
+      }
+      return is;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const roadmap_node& n){
+      return os << "[" << (n.done ? "x" : " ") << "] #" << n.id << " (parent " << n.parent_id << ") " << n.title << " | weight " << n.weight << "\n";
+    }
+};
+
+class roadmap{
+
+  private:
+    std::string main_goal;
+    std::vector<roadmap_node> nodes;
+
+    std::vector<std::size_t> children_of(int pid) const {
+      std::vector<std::size_t> ch;
+      for(std::size_t i = 0; i < nodes.size(); i++)
+        if(nodes[i].get_parent() == pid) ch.push_back(i);
+      return ch;
+    }
+
+    double subtree_progress(std::size_t idx) const {
+      std::vector<std::size_t> ch = children_of(nodes[idx].get_id());
+      if(ch.empty()) return nodes[idx].is_done() ? 100.0 : 0.0;
+      double sum_w = 0, done_w = 0;
+      for(std::size_t c : ch){
+        double w = nodes[c].get_weight();
+        sum_w += w;
+        done_w += w * (subtree_progress(c) / 100.0);
+      }
+      return sum_w > 0 ? (done_w / sum_w) * 100.0 : 0.0;
+    }
+
+    void refresh_parents(){
+      bool changed = true;
+      while(changed){
+        changed = false;
+        for(std::size_t i = 0; i < nodes.size(); i++){
+          std::vector<std::size_t> ch = children_of(nodes[i].get_id());
+          if(!ch.empty() && !nodes[i].is_done() && subtree_progress(i) >= 99.9){
+            nodes[i].finish();
+            changed = true;
+          }
+        }
+      }
+    }
+
+    std::string find_leaf(int pid) const {
+      for(std::size_t idx : children_of(pid)){
+        if(nodes[idx].is_done()) continue;
+        std::string sub = find_leaf(nodes[idx].get_id());
+        return sub.empty() ? nodes[idx].get_title() : sub;
+      }
+      return "";
+    }
+
+    void print_branch(std::ostream& os, std::size_t idx, const std::string& prefix, bool is_last) const {
+      os << prefix << (is_last ? "\\-- " : "|-- ") << "[" << (nodes[idx].is_done() ? "x" : " ") << "] " << nodes[idx].get_title() << " (" << subtree_progress(idx) << "%)\n";
+      std::vector<std::size_t> ch = children_of(nodes[idx].get_id());
+      for(std::size_t i = 0; i < ch.size(); i++)
+        print_branch(os, ch[i], prefix + (is_last ? "    " : "|   "), i + 1 == ch.size());
+    }
+
+  public:
+    explicit roadmap(const std::string& mg = "Main Goal", const std::vector<roadmap_node>& no = {}) : main_goal{mg}, nodes{no}{
+      refresh_parents();
+    }
+
+    bool split_problem(const std::string& parent_title, const std::string& sub_title, double weight){
+      int pid = 0, max_id = 0;
+      for(const auto& n : nodes){
+        max_id = std::max(max_id, n.get_id());
+        if(n.get_title() == parent_title) pid = n.get_id();
+      }
+      if(pid == 0 && !nodes.empty()) return false;
+      nodes.push_back(roadmap_node{max_id + 1, pid, sub_title, weight, false});
+      return true;
+    }
+
+    bool complete_step(const std::string& title){
+      for(auto& n : nodes)
+        if(n.get_title() == title && !n.is_done()){
+          n.finish();
+          refresh_parents();
+          return true;
+        }
+      return false;
+    }
+
+    double overall_progress() const {
+      std::vector<std::size_t> roots = children_of(0);
+      if(roots.empty()) return 0;
+      double sum = 0;
+      for(std::size_t r : roots) sum += subtree_progress(r);
+      return sum / static_cast<double>(roots.size());
+    }
+
+    std::string next_step() const {
+      std::string step = find_leaf(0);
+      return step.empty() ? "All steps completed!" : step;
+    }
+
+    void render_tree(std::ostream& os = std::cout) const {
+      os << "Roadmap [" << main_goal << "] (" << overall_progress() << "%):\n";
+      std::vector<std::size_t> roots = children_of(0);
+      for(std::size_t i = 0; i < roots.size(); i++)
+        print_branch(os, roots[i], "  ", i + 1 == roots.size());
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const roadmap& rm){
+      rm.render_tree(os);
+      for(const auto& n : rm.nodes) os << "  " << n;
       return os;
     }
 };
@@ -416,14 +722,24 @@ class lifetracker{
     date current_date;
     budget user_budget;
     task_tracker user_tasks;
+    calendar user_calendar;
+    roadmap user_roadmap;
 
   public:
-    explicit lifetracker(const std::string& user = "JhonDoe", const std::string& pass = "password1234", const date& c_d = date{}, const budget& u_b = budget{}, const task_tracker& u_t = task_tracker{}) : User{user}, Password{pass}, current_date{c_d}, user_budget{u_b}, user_tasks{u_t}{}
+    explicit lifetracker(const std::string& user = "JhonDoe", const std::string& pass = "password1234", const date& c_d = date{}, const budget& u_b = budget{}, const task_tracker& u_t = task_tracker{}, const calendar& u_c = calendar{}, const roadmap& u_r = roadmap{}) : User{user}, Password{pass}, current_date{c_d}, user_budget{u_b}, user_tasks{u_t}, user_calendar{u_c}, user_roadmap{u_r}{}
 
     bool login(const std::string& u, const std::string& p) const { return u == User && p == Password; }
 
     void add_transaction(const transaction& t){ user_budget.add_transaction(t); }
     void add_task(const task& t){ user_tasks.add_task(t); }
+    void add_event(const calendar_event& e){ user_calendar.add_event(e); }
+
+    int sync_deadlines(const std::string& ics_path){
+      for(const auto& t : user_tasks.prioritize())
+        if(t.has_level(1))
+          user_calendar.add_event(calendar_event{"Deadline: " + t.get_title(), t.get_deadline(), 9, 60, false});
+      return user_calendar.sync_google(ics_path);
+    }
 
     void next_day(){
       current_date = current_date.tomorrow();
@@ -432,16 +748,20 @@ class lifetracker{
 
     void summary() const {
       std::cout << "=== " << User << ", " << current_date << " ===\n";
-      user_budget.monthly_report(current_date);
+      user_budget.period_report(current_date);
       user_budget.category_report(current_date);
+      user_budget.subscriptions_status(current_date);
       user_budget.goals_status(current_date);
       std::cout << "Tasks done: " << user_tasks.completion() << "%\n";
       std::vector<task> top = user_tasks.prioritize();
       if(!top.empty()) std::cout << "Next up: " << top.front();
+      user_calendar.week_agenda(current_date);
+      user_roadmap.render_tree();
+      std::cout << "Next roadmap step: " << user_roadmap.next_step() << "\n";
     }
 
     friend std::ostream& operator<<(std::ostream& os, const lifetracker& l){
-      return os << "User: " << l.User << " | date " << l.current_date << "\n" << l.user_budget << l.user_tasks;
+      return os << "User: " << l.User << " | date " << l.current_date << "\n" << l.user_budget << l.user_tasks << l.user_calendar << l.user_roadmap;
     }
 };
 
@@ -465,24 +785,29 @@ int main() {
     std::vector<transaction> txs = load_all<transaction>("data/transactions.csv");
     std::vector<money_goal> goals = load_all<money_goal>("data/goals.csv");
     std::vector<task> tasks = load_all<task>("data/tasks.csv");
-    if(txs.empty() || goals.empty() || tasks.size() < 2){
+    std::vector<calendar_event> events = load_all<calendar_event>("data/events.csv");
+    std::vector<roadmap_node> nodes = load_all<roadmap_node>("data/roadmap.csv");
+    if(txs.empty() || goals.empty() || tasks.size() < 2 || events.empty() || nodes.empty()){
       std::cerr << "Missing or empty data files\n";
       return 1;
     }
 
     // date
-    std::cout << "Start: " << start << ", tomorrow: " << start.tomorrow() << ", days until tomorrow: " << start.days_until(start.tomorrow()) << ", same month: " << start.same_month(start.tomorrow()) << "\n\n";
+    std::cout << "Start: " << start << ", tomorrow: " << start.tomorrow() << ", days until tomorrow: " << start.days_until(start.tomorrow()) << ", same day: " << start.same_day(start.tomorrow()) << ", same week: " << start.same_week(start.tomorrow()) << ", same month: " << start.same_month(start.tomorrow()) << ", same year: " << start.same_year(start.tomorrow()) << ", next billing: " << start.next_billing(start) << ", ics: " << start.ics_code() << "\n\n";
 
     // transactions + goals
     const transaction& first_tx = txs.front();
-    std::cout << first_tx << first_tx.category_name() << " " << first_tx.signed_amount() << " " << first_tx.is_membership() << " " << first_tx.in_month(start) << "\n";
+    std::cout << first_tx << first_tx.get_title() << " " << first_tx.category_name() << " " << first_tx.signed_amount() << " " << first_tx.is_membership() << " " << first_tx.in_day(start) << " " << first_tx.in_week(start) << " " << first_tx.in_month(start) << " " << first_tx.in_year(start) << " " << first_tx.next_billing_date(start) << "\n";
     const money_goal& first_goal = goals.front();
     std::cout << first_goal << first_goal.get_money() << " " << first_goal.days_left(start) << "\n\n";
 
-    // budget 
+    // budget
     budget b{balance, txs, goals};
+    b.add_goal(money_goal{"New Monitor", 1200, date{1, 5, 2027}});
     b.monthly_report(start);
+    b.period_report(start);
     b.category_report(start);
+    b.subscriptions_status(start);
     b.goals_status(start);
     std::cout << "Subscriptions: " << b.subscriptions_cost() << "\n" << b;
     budget copy{b};
@@ -493,7 +818,7 @@ int main() {
     // tasks
     task& first_task = tasks.front();
     first_task.check_missed(start);
-    std::cout << first_task << first_task.get_title() << " more urgent than " << tasks.back().get_title() << ": " << first_task.more_urgent(tasks.back()) << ", level 1: " << first_task.has_level(1) << ", done: " << first_task.is_done() << ", missed: " << first_task.is_missed() << "\n\n";
+    std::cout << first_task << first_task.get_title() << " (due " << first_task.get_deadline() << ") more urgent than " << tasks.back().get_title() << ": " << first_task.more_urgent(tasks.back()) << ", diff: " << first_task.deadline_diff(tasks.back()) << " days, level 1: " << first_task.has_level(1) << ", done: " << first_task.is_done() << ", missed: " << first_task.is_missed() << "\n\n";
 
     // task tracker: ranking
     task_tracker tt{tasks};
@@ -511,8 +836,23 @@ int main() {
     std::cout << "\n" << (tt.complete(title) ? "Completed " : "No open task named ") << title << "\n";
     std::cout << tt << tt.completion() << "%\n\n";
 
+    // calendar
+    calendar cal{user + "@gmail.com", events};
+    std::cout << "Conflicts found: " << cal.detect_conflicts() << "\n";
+    cal.modify_event(events.back().get_title(), start.tomorrow(), 16);
+    cal.week_agenda(start);
+    cal.sync_google("data/gcal_sync.ics");
+    std::cout << cal << "\n";
+
+    // roadmap
+    roadmap rm{"Launch Life Tracker", nodes};
+    rm.split_problem("Smart Task Tracker", "Deadline Delta View", 1.5);
+    rm.complete_step("Binary Search Ranking");
+    rm.render_tree();
+    std::cout << "Overall progress: " << rm.overall_progress() << "%, next step: " << rm.next_step() << "\n" << rm << "\n";
+
     // lifetracker
-    lifetracker app{user, pass, start, b, tt};
+    lifetracker app{user, pass, start, b, tt, cal, rm};
     std::string typed_user, typed_pass;
     std::cout << "Login (user password): ";
     std::cin >> typed_user >> typed_pass;
@@ -526,6 +866,9 @@ int main() {
     if(read_item("New transaction (title,category,d.m.y,amount,subscription,win): ", new_tx)) app.add_transaction(new_tx);
     task new_task;
     if(read_item("New task (title,description,level,d.m.y,progress): ", new_task)) app.add_task(new_task);
+    calendar_event new_ev;
+    if(read_item("New event (title,d.m.y,start_hour,duration_min,synced): ", new_ev)) app.add_event(new_ev);
+    app.sync_deadlines("data/gcal_sync.ics");
     int days = 0;
     std::cout << "Days to advance: ";
     std::cin >> days;

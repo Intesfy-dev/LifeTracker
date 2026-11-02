@@ -1,0 +1,9 @@
+1
+1
+0
+Lab 1
+Arian Cyberpunk
+Spotify,entertainment,15.10.2026,25,1,0
+Study ASC,Review assembly,1,8.11.2026,20
+Code Review,4.11.2026,15,60,0
+2
