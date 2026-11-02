@@ -847,6 +847,7 @@ class roadmap{
     }
 
     void print_branch(std::ostream& os, std::size_t root_idx, const std::string& base_prefix, bool root_last) const {
+      // cppcheck-suppress uninitMemberVarNoCtor
       struct frame{
         std::size_t idx;
         std::string prefix;
