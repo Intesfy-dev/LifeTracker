@@ -1,0 +1,8 @@
+# id,parent_id,title,weight,done
+1,0,Build Life Tracker,1.0,0
+2,1,Money Tracker,2.0,0
+3,1,Smart Task Tracker,2.0,0
+4,1,Google Calendar Sync,1.5,0
+5,2,CSV Transactions Parser,1.0,1
+6,2,Subscription Reserve Alert,1.0,1
+7,3,Binary Search Ranking,1.5,0
