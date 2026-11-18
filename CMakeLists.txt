@@ -31,6 +31,8 @@ set(SOURCES
   app/gui_window.cpp
 )
 
+enable_testing()
+
 add_executable(life_tracker ${SOURCES})
 target_include_directories(life_tracker PRIVATE app)
 # Radacina proiectului (unde e folderul data/) - executabilul face chdir aici la pornire
@@ -47,3 +49,6 @@ elseif(Qt5_FOUND)
 else()
   message(STATUS "Qt not found — Building Life Tracker with Emerald Terminal UI (TUI)")
 endif()
+
+# CI-ul copiaza artifacts/bin/* dupa "cmake --install build --prefix artifacts"
+install(TARGETS life_tracker RUNTIME DESTINATION bin)
