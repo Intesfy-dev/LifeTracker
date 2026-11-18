@@ -1,0 +1,5 @@
+# Testele traiesc in build/tests (asa se asteapta si CI-ul)
+add_executable(oop_test test_model.cpp)
+target_link_libraries(oop_test PRIVATE lt_core)
+add_test(NAME model_tests COMMAND oop_test)
+install(TARGETS oop_test RUNTIME DESTINATION bin)

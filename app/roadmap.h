@@ -31,7 +31,6 @@ private:
 public:
   explicit roadmap(const std::string& mg = "Main Goal", const std::vector<roadmap_node>& no = {});
 
-  const std::string& get_main_goal() const { return main_goal; }
   const std::vector<roadmap_node>& get_nodes() const { return nodes; }
 
   bool split_problem(const std::string& parent_title, const std::string& sub_title, double sub_weight);

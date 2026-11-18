@@ -15,7 +15,6 @@ class fitness_tracker{
   public:
     explicit fitness_tracker(int wcg = 2500, const std::vector<workout_session>& se = {});
 
-    int get_weekly_goal() const { return weekly_calorie_goal; }
     const std::vector<workout_session>& get_sessions() const { return sessions; }
 
     void add_session(const workout_session& ws);

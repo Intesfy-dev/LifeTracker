@@ -22,7 +22,6 @@ class task_tracker{
     int get_total() const { return total; }
     int get_done() const { return done; }
     int get_tbd() const { return tbd; }
-    int get_missed() const { return missed; }
     const std::vector<task>& get_tasks() const { return tasks; }
     void set_tasks(const std::vector<task>& ta) { tasks = ta; recount(); }
 

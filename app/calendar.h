@@ -18,7 +18,6 @@ class calendar{
   public:
     explicit calendar(const std::string& acc = "user@gmail.com", const std::vector<calendar_event>& ev = {});
 
-    const std::string& get_account() const { return google_account; }
     const std::vector<calendar_event>& get_events() const { return events; }
 
     bool add_event(const calendar_event& e);

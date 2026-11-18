@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "lifetracker.h"
 
@@ -30,10 +31,16 @@ void test_roadmap() {
   r.split_problem("A", "a2", 1);
   r.split_problem("a1", "a1x", 1);
   check(r.overall_progress() == 0, "roadmap porneste de la 0%");
+  int a1_id = 0;
+  for (const auto& n : r.get_nodes())
+    if (n.get_title() == "a1") a1_id = n.get_id();
+  check(r.node_progress(a1_id) == 0, "progresul unui nod nefinalizat e 0");
+  check(r.node_remaining_effort(a1_id) > 0, "efortul ramas e pozitiv inainte de finalizare");
 
   check(r.complete_step("a1x"), "complete a1x");
   check(r.complete_step("a2"), "complete a2");
   check(all_done(r), "parintii se finalizeaza cand toti copiii sunt gata");
+  check(r.node_progress(a1_id) >= 99.9 && r.node_remaining_effort(a1_id) == 0, "nod finalizat: 100% si efort ramas 0");
 
   check(r.reopen_step("a2"), "redeschide a2");
   check(r.overall_progress() < 99.9, "progresul scade dupa redeschidere");
@@ -70,7 +77,11 @@ void test_tasks() {
   check(!tt.get_tasks()[0].is_done() && tt.get_tasks()[0].get_progress() == 40, "progresul anterior se restaureaza");
   check(tt.get_done() == 0 && tt.get_tbd() == 1, "contoarele se recalculeaza");
   check(!tt.reopen("t", d), "nu poti redeschide un task nefinalizat");
-  check(tt.remove_task("t", d), "sterge task");
+  std::vector<task> replacement;
+  replacement.emplace_back("u", "y", 1, d, 0);
+  tt.set_tasks(replacement);
+  check(tt.get_total() == 1 && tt.get_tasks()[0].get_title() == "u", "set_tasks inlocuieste lista si recalculeaza");
+  check(tt.remove_task("u", d), "sterge task");
   check(tt.get_total() == 0, "lista goala dupa stergere");
 }
 

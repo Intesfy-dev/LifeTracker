@@ -182,7 +182,18 @@ static int run_legacy_demo() {
     return 0;
 }
 
-int main(int argc, char* argv[]) {
+namespace {
+// true daca stdin este redirectionat dintr-un fisier/pipe (ex: ./oop_main < tastatura.txt)
+bool stdin_is_redirected() {
+#ifdef __unix__
+    return !isatty(STDIN_FILENO);
+#else
+    return false;
+#endif
+}
+} // namespace
+
+int main(int argc, char* const argv[]) {
 #ifdef LT_ROOT_DIR
     std::error_code ec;
     if (!std::filesystem::exists("data/user.txt", ec) && std::filesystem::exists(LT_ROOT_DIR, ec)) {
@@ -198,12 +209,10 @@ int main(int argc, char* argv[]) {
         if (arg == "--cli" || arg == "--demo" || arg == "--batch") force_cli = true;
     }
 
-#ifdef __unix__
     // Daca stdin este redirectionat din fisier (ex: ./scripts/run_valgrind.sh < tastatura.txt), rulam scenariul automat CLI
-    if (!isatty(STDIN_FILENO) && !force_tui) {
+    if (stdin_is_redirected() && !force_tui) {
         force_cli = true;
     }
-#endif
 
     if (force_cli) {
         return run_legacy_demo();
@@ -213,7 +222,13 @@ int main(int argc, char* argv[]) {
 
 #ifdef USE_QT_GUI
     if (!force_tui) {
-        QApplication qt_app{argc, argv};
+        // QApplication cere char** modificabil, asa ca ii dam o copie a argumentelor
+        int qt_argc = argc;
+        std::vector<std::string> qt_args(argv, argv + argc);
+        std::vector<char*> qt_argv;
+        for (auto& a : qt_args) qt_argv.push_back(a.data());
+        qt_argv.push_back(nullptr);
+        QApplication qt_app{qt_argc, qt_argv.data()};
         gui_window win{mgr};
         win.show();
         return qt_app.exec();

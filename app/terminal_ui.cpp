@@ -36,7 +36,7 @@ namespace {
   }
 }
 
-void terminal_ui::clear_screen() const {
+void terminal_ui::clear_screen() {
   std::cout << ansi::bg_dark << ansi::fg_white << "\033[2J\033[H";
 }
 
@@ -50,7 +50,7 @@ void terminal_ui::print_banner(const std::string& subtitle) const {
             << ansi::reset << ansi::bg_dark << ansi::fg_white << "\n\n";
 }
 
-void terminal_ui::pause_prompt() const {
+void terminal_ui::pause_prompt() {
   std::cout << "\n" << ansi::fg_muted << "Apasa [ENTER] pentru a continua..." << ansi::reset << ansi::bg_dark << ansi::fg_white;
   std::string dummy;
   std::getline(std::cin, dummy);
@@ -314,16 +314,16 @@ void terminal_ui::run_dashboard(lifetracker& app, double initial_balance) {
       std::cin >> ropt;
       std::cin.ignore(1000, '\n');
       if (ropt == 1) {
-        std::string parent, sub;
+        std::string parent, sub_title;
         double w = 1.0;
         std::cout << "Titlu nod parinte: ";
         std::getline(std::cin, parent);
         std::cout << "Titlu sub-problema noua: ";
-        std::getline(std::cin, sub);
+        std::getline(std::cin, sub_title);
         std::cout << "Pondere (weight, ex 1.5): ";
         std::cin >> w;
         std::cin.ignore(1000, '\n');
-        if (app.roadmap_ref().split_problem(parent, sub, w)) {
+        if (app.roadmap_ref().split_problem(parent, sub_title, w)) {
           mgr.save_user_app(app, initial_balance);
           std::cout << "✓ Sub-problema adaugata in arbore!\n";
         } else {

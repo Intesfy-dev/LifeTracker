@@ -6,9 +6,9 @@ class terminal_ui {
 private:
   account_manager& mgr;
 
-  void clear_screen() const;
+  static void clear_screen();
   void print_banner(const std::string& subtitle) const;
-  void pause_prompt() const;
+  static void pause_prompt();
 
   void run_dashboard(lifetracker& app, double initial_balance);
 
