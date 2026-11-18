@@ -7,7 +7,7 @@ private:
   account_manager& mgr;
 
   static void clear_screen();
-  void print_banner(const std::string& subtitle) const;
+  static void print_banner(const std::string& subtitle);
   static void pause_prompt();
 
   void run_dashboard(lifetracker& app, double initial_balance);

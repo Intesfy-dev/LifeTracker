@@ -182,18 +182,7 @@ static int run_legacy_demo() {
     return 0;
 }
 
-namespace {
-// true daca stdin este redirectionat dintr-un fisier/pipe (ex: ./oop_main < tastatura.txt)
-bool stdin_is_redirected() {
-#ifdef __unix__
-    return !isatty(STDIN_FILENO);
-#else
-    return false;
-#endif
-}
-} // namespace
-
-int main(int argc, char* const argv[]) {
+int main(int argc, const char* const argv[]) {
 #ifdef LT_ROOT_DIR
     std::error_code ec;
     if (!std::filesystem::exists("data/user.txt", ec) && std::filesystem::exists(LT_ROOT_DIR, ec)) {
@@ -209,9 +198,15 @@ int main(int argc, char* const argv[]) {
         if (arg == "--cli" || arg == "--demo" || arg == "--batch") force_cli = true;
     }
 
+#ifdef __unix__
     // Daca stdin este redirectionat din fisier (ex: ./scripts/run_valgrind.sh < tastatura.txt), rulam scenariul automat CLI
-    if (stdin_is_redirected() && !force_tui) {
+    if (!isatty(STDIN_FILENO) && !force_tui) {
         force_cli = true;
+    }
+#endif
+
+    if (force_tui && force_cli) {
+        std::cerr << "Avertisment: --tui si --cli/--demo date impreuna; se foloseste modul CLI.\n";
     }
 
     if (force_cli) {

@@ -40,7 +40,7 @@ void terminal_ui::clear_screen() {
   std::cout << ansi::bg_dark << ansi::fg_white << "\033[2J\033[H";
 }
 
-void terminal_ui::print_banner(const std::string& subtitle) const {
+void terminal_ui::print_banner(const std::string& subtitle) {
   clear_screen();
   std::cout << ansi::bg_card << ansi::fg_white << ansi::bold
             << "╭──────────────────────────────────────────────────────────────────────────────╮\n"
