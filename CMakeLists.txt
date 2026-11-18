@@ -52,3 +52,5 @@ endif()
 
 # CI-ul copiaza artifacts/bin/* dupa "cmake --install build --prefix artifacts"
 install(TARGETS life_tracker RUNTIME DESTINATION bin)
+install(DIRECTORY app/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY DESTINATION lib)
