@@ -1,8 +1,16 @@
 # id,parent_id,title,weight,done
-1,0,Build Life Tracker,1,0
+1,0,Build Life Tracker,1,1
 2,1,Money Tracker,2,1
-3,1,Smart Task Tracker,2,0
-4,1,Google Calendar Sync,1.5,0
+3,1,Smart Task Tracker,2,1
+4,1,Google Calendar Sync,1.5,1
 5,2,CSV Transactions Parser,1,1
 6,2,Subscription Reserve Alert,1,1
-7,3,Binary Search Ranking,1.5,0
+7,3,Binary Search Ranking,1.5,1
+8,0,Test,2,1
+9,8,examen,1,1
+10,0,examen 2,1,1
+11,8,examen ss,1,1
+12,8,dadada,1,1
+13,8,dsadasdas,1,1
+14,12,sdadsafe,1,1
+15,0,fefae,2,1

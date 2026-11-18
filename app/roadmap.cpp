@@ -6,7 +6,7 @@ std::vector<std::size_t> roadmap::children_of(int pid) const {
   std::vector<std::size_t> ch;
   for(std::size_t i = 0; i < nodes.size(); i++)
     if(nodes[i].get_parent() == pid) ch.push_back(i);
-    return ch;
+  return ch;
 }
 
 double roadmap::subtree_progress(std::size_t idx) const {
@@ -215,13 +215,13 @@ int roadmap::remove_node(int id) {
 double roadmap::node_progress(int node_id) const {
   for(std::size_t i = 0; i < nodes.size(); i++)
     if(nodes[i].get_id() == node_id) return subtree_progress(i);
-    return 0.0;
+  return 0.0;
 }
 
 double roadmap::node_remaining_effort(int node_id) const {
   for(std::size_t i = 0; i < nodes.size(); i++)
     if(nodes[i].get_id() == node_id) return subtree_effort(i);
-    return 0.0;
+  return 0.0;
 }
 
 double roadmap::overall_progress() const {
