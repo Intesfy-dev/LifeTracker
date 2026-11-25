@@ -78,6 +78,21 @@
 - [ ] tag de `git` pe commit cu **toate bifele**: de exemplu `v0.3` sau `v1.0`
 - [ ] code review #3 2 proiecte
 
+## Biblioteci folosite
+
+#### Qt (opțional) - interfața grafică
+[Qt](https://www.qt.io/) este un framework C++ multiplatformă (Linux, Windows, macOS) pentru aplicații cu interfață grafică. Proiectul folosește modulul **Qt Widgets**, care oferă componentele clasice de interfață: ferestre, butoane, câmpuri de text, tabele, liste și meniuri, plus mecanismul de semnale și sloturi prin care aplicația reacționează la acțiunile utilizatorului. Qt este disponibil sub licență open-source (LGPL/GPL).
+
+Qt este **opțional**: la configurare, CMake caută Qt6, iar dacă nu îl găsește, Qt5. Dacă a găsit una dintre ele, se compilează cu macro-ul `USE_QT_GUI` și aplicația pornește cu interfața grafică, păstrând interfața din terminal ca variantă de rezervă. Dacă nu e instalat Qt, aplicația se compilează și funcționează doar cu interfața din terminal (TUI), deci proiectul nu depinde obligatoriu de Qt.
+
+Instalare (exemple): `sudo apt install qt6-base-dev` pe Ubuntu/Debian, `brew install qt` pe macOS.
+
+#### Biblioteca standard C++ (STL)
+Containere și algoritmi (`<vector>`, `<map>`, `<algorithm>`), șiruri de caractere (`<string>`), fluxuri pentru consolă, fișiere și conversii text (`<iostream>`, `<fstream>`, `<sstream>`). Toată logica de domeniu (buget, calendar, task-uri, roadmap, obiceiuri, fitness) folosește doar biblioteca standard, fără dependențe externe.
+
+#### CMake
+Sistem de build care configurează proiectul, detectează opțional Qt și compilează logica de domeniu într-o bibliotecă statică (`oop`), folosită de executabil și de teste. Vezi secțiunea de mai jos.
+
 ## Instrucțiuni de compilare
 
 Proiectul este configurat cu CMake.
@@ -185,3 +200,9 @@ The [template repository](https://github.com/mcmarius/oop-template) itself is li
 ## Resurse
 
 - adăugați trimiteri **detaliate** către resursele externe care v-au ajutat sau pe care le-ați folosit
+- Qt Widgets, prezentare generală a modulului: https://doc.qt.io/qt-6/qtwidgets-index.html
+- Qt cu CMake (`find_package(Qt6 ...)`, linkarea `Qt6::Widgets`): https://doc.qt.io/qt-6/cmake-get-started.html
+- Manualul CMake pentru Qt: https://cmake.org/cmake/help/latest/manual/cmake-qt.7.html
+- Documentația CMake pentru `find_package` (folosit pentru detectarea opțională a Qt): https://cmake.org/cmake/help/latest/command/find_package.html
+- Referința limbajului și a bibliotecii standard C++: https://en.cppreference.com/
+- Formatul iCalendar (`.ics`), folosit pentru exportul evenimentelor în Google Calendar: https://datatracker.ietf.org/doc/html/rfc5545
