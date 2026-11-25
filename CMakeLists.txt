@@ -107,6 +107,9 @@ target_sources(${MAIN_LIBRARY_NAME}
 # NOTE: RUN_SANITIZERS is optional, if it's not present it will default to true
 set_compiler_flags(RUN_SANITIZERS ${USE_ASAN} TARGET_NAMES ${MAIN_EXECUTABLE_NAME} ${MAIN_LIBRARY_NAME})
 
+# project root (where the data/ folder lives) - the executable changes the working directory here at startup
+target_compile_definitions(${MAIN_EXECUTABLE_NAME} PRIVATE LT_ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
 ###############################################################################
 
 # Configure includes
@@ -132,13 +135,6 @@ target_include_directories(${MAIN_LIBRARY_NAME} SYSTEM PRIVATE
 )
 
 # target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE ${<SomeLib>_SOURCE_DIR}/include)
-
-###############################################################################
-
-# Compile definitions
-
-# project root (where the data/ folder lives) - the executable changes the working directory here at startup
-target_compile_definitions(${MAIN_EXECUTABLE_NAME} PRIVATE LT_ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 ###############################################################################
 
