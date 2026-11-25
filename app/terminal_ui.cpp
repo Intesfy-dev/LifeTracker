@@ -1,5 +1,10 @@
 #include "terminal_ui.h"
 #include "io_utils.h"
+#include "lt_exceptions.h"
+#include "reminder_center.h"
+#include "budget_alert.h"
+#include "deadline_alert.h"
+#include "habit_alert.h"
 
 #include <iomanip>
 #include <iostream>
@@ -134,6 +139,7 @@ int terminal_ui::run() {
 }
 
 void terminal_ui::run_dashboard(lifetracker& app, double initial_balance) {
+  reminder_center alerts = reminder_center::with_defaults();
   while (true) {
     std::ostringstream sub;
     sub << "CONT: " << app.get_user() << "  |  DATA: " << app.get_date()
@@ -155,6 +161,7 @@ void terminal_ui::run_dashboard(lifetracker& app, double initial_balance) {
               << ansi::fg_neon << "  ▍ [5] " << ansi::fg_white << "Roadmap: Afiseaza Arbore / Split Sub-problema / Completeaza Pas\n"
               << ansi::fg_neon << "  ▍ [6] " << ansi::fg_white << "Habits & Fitness: Check-in Obicei / Adauga Antrenament\n"
               << ansi::fg_neon << "  ▍ [7] " << ansi::fg_white << "Avanseaza la Ziua Urmatoare (+1 Day)\n"
+              << ansi::fg_neon << "  ▍ [8] " << ansi::fg_white << "Alerte Inteligente: Vezi Alerte / Adauga Regula\n"
               << ansi::fg_neon << "  ▍ [0] " << ansi::fg_muted << "Salveaza & Deconectare (OFF)\n\n"
               << ansi::fg_neon << "  ⏻ Comanda: " << ansi::fg_white;
 
@@ -426,6 +433,47 @@ void terminal_ui::run_dashboard(lifetracker& app, double initial_balance) {
       app.next_day();
       mgr.save_user_app(app, initial_balance);
       std::cout << "\n» Data curenta a avansat la " << app.get_date() << "!\n";
+      pause_prompt();
+    } else if (cmd == 8) {
+      std::cout << "\n" << alerts;
+      const std::vector<std::string> found = alerts.run_all(app);
+      std::cout << "\n" << (found.empty() ? "✓ Nicio alerta. Totul e sub control!\n" : "Alerte active:\n");
+      for (const std::string& msg : found) std::cout << "  " << ansi::fg_neon << "▍ " << ansi::fg_white << msg << "\n";
+
+      std::cout << "\n[1] Regula buget  [2] Regula deadline  [3] Regula obiceiuri  [4] Adapteaza la prognoza  [0] Inapoi: ";
+      int aopt = 0;
+      std::cin >> aopt;
+      std::cin.ignore(1000, '\n');
+      try {
+        if (aopt == 1) {
+          double min_left = 0, limit = 0;
+          std::cout << "Sold minim (RON) si limita lunara de cheltuieli (RON), ex: 300 2000: ";
+          std::cin >> min_left >> limit;
+          std::cin.ignore(1000, '\n');
+          alerts.add_rule(budget_alert{min_left, limit});
+          std::cout << "✓ Regula de buget adaugata!\n";
+        } else if (aopt == 2) {
+          int days = 0;
+          std::cout << "Cu cate zile inainte de termen sa te avertizeze (0-60): ";
+          std::cin >> days;
+          std::cin.ignore(1000, '\n');
+          alerts.add_rule(deadline_alert{days});
+          std::cout << "✓ Regula de deadline adaugata!\n";
+        } else if (aopt == 3) {
+          double pct = 0;
+          std::cout << "Consistenta minima acceptata (0-100 %): ";
+          std::cin >> pct;
+          std::cin.ignore(1000, '\n');
+          alerts.add_rule(habit_alert{pct});
+          std::cout << "✓ Regula de obiceiuri adaugata!\n";
+        } else if (aopt == 4) {
+          const int n = alerts.adapt_to_forecast(app, 3);
+          std::cout << (n > 0 ? "Prognoza pe 3 luni e negativa: reguli de buget inasprite: " + std::to_string(n) : std::string{"Prognoza pe 3 luni e pozitiva, nu schimbam nimic."}) << "\n";
+        }
+      } catch (const invalid_value_error& e) {
+        std::cout << "✕ " << e.what() << "\n";
+      }
+      std::cout << "(" << alerts.size() << " reguli active)\n";
       pause_prompt();
     }
   }

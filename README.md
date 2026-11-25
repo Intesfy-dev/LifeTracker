@@ -38,26 +38,26 @@
 ## Tema 2
 
 #### Cerințe
-- [ ] separarea codului din clase în `.h` (sau `.hpp`) și `.cpp`
-- [ ] moșteniri:
+- [x] separarea codului din clase în `.h` (sau `.hpp`) și `.cpp`
+- [x] moșteniri:
   - minim o clasă de bază și **3 clase derivate** din aceeași ierarhie; cele 3 derivate moștenesc aceeași clasă de bază
   - ierarhia trebuie să fie cu bază proprie, nu derivată dintr-o clasă predefinită
-  - [ ] funcții virtuale (pure) apelate prin pointeri de bază din clasa care conține atributul de tip pointer de bază
+  - [x] funcții virtuale (pure) apelate prin pointeri de bază din clasa care conține atributul de tip pointer de bază
     - minim o funcție virtuală va fi **specifică temei** (i.e. nu simple citiri/afișări sau preluate din biblioteci i.e. draw/update/render)
     - constructori virtuali (clone): sunt necesari, dar nu se consideră funcții specifice temei
     - afișare virtuală, interfață non-virtuală
-  - [ ] apelarea constructorului din clasa de bază din constructori din derivate
-  - [ ] clasă cu atribut de tip pointer la o clasă de bază cu derivate; aici apelați funcțiile virtuale prin pointer de bază, eventual prin interfața non-virtuală din bază
-    - [ ] suprascris cc/op= pentru copieri/atribuiri corecte, copy and swap
-    - [ ] `dynamic_cast`/`std::dynamic_pointer_cast` pentru downcast cu sens
-    - [ ] smart pointers (recomandat, opțional)
-- [ ] excepții
-  - [ ] ierarhie proprie cu baza `std::exception` sau derivată din `std::exception`; minim **3** clase pentru erori specifice distincte
+  - [x] apelarea constructorului din clasa de bază din constructori din derivate
+  - [x] clasă cu atribut de tip pointer la o clasă de bază cu derivate; aici apelați funcțiile virtuale prin pointer de bază, eventual prin interfața non-virtuală din bază
+    - [x] suprascris cc/op= pentru copieri/atribuiri corecte, copy and swap
+    - [x] `dynamic_cast`/`std::dynamic_pointer_cast` pentru downcast cu sens
+    - [x] smart pointers (recomandat, opțional)
+- [x] excepții
+  - [x] ierarhie proprie cu baza `std::exception` sau derivată din `std::exception`; minim **3** clase pentru erori specifice distincte
     - clasele de excepții trebuie să trateze categorii de erori distincte (exemplu de erori echivalente: citire fișiere cu diverse extensii)
-  - [ ] utilizare cu sens: de exemplu, `throw` în constructor (sau funcție care întoarce un obiect), `try`/`catch` în `main`
+  - [x] utilizare cu sens: de exemplu, `throw` în constructor (sau funcție care întoarce un obiect), `try`/`catch` în `main`
   - această ierarhie va fi complet independentă de ierarhia cu funcții virtuale
-- [ ] funcții și atribute `static`
-- [ ] STL
+- [x] funcții și atribute `static`
+- [x] STL
 - [ ] cât mai multe `const`
 - [ ] funcții *de nivel înalt*, de eliminat cât mai mulți getters/setters/funcții low-level
 - [ ] minim 75-78% din codul propriu să fie C++; testele nu se pun, nu vă luați după procentajul din interfața web
@@ -66,6 +66,15 @@
   - noua derivată va fi integrată în codul existent (adică va fi folosită, nu adăugată doar ca să fie)
 - [ ] tag de `git` pe commit cu **toate bifele**: de exemplu `v0.2`
 - [ ] code review #2 2 proiecte
+
+#### Ce s-a implementat (Tema 2, în lucru)
+- **Ierarhia de alerte** (`app/reminder_rule.h`): baza abstractă `reminder_rule` și 3 derivate: `budget_alert` (sold sub prag, cheltuieli lunare peste limită, abonamente neacoperite), `deadline_alert` (task-uri scadente sau întârziate) și `habit_alert` (streak-uri în pericol, consistență scăzută).
+  - funcția virtuală pură specifică temei: `analyze(const lifetracker&)`; afișarea virtuală: `print_details()`; constructorul virtual: `clone()`
+  - interfață non-virtuală: `evaluate()` și `operator<<` din bază apelează funcțiile virtuale private
+  - `reminder_center` ține regulile ca `std::vector<std::unique_ptr<reminder_rule>>`, are constructor de copiere prin `clone()`, `operator=` cu copy and swap și folosește `dynamic_cast<budget_alert*>` în `adapt_to_forecast()` ca să înăsprească doar regulile de buget când prognoza e negativă
+  - `static`: `reminder_rule::live_rules()` (numărul de reguli existente) și `reminder_center::with_defaults()`
+- **Excepții** (`app/lt_exceptions.h`): baza `lifetracker_error` (derivată din `std::runtime_error`) și `invalid_value_error` (configurare invalidă, aruncată din constructorii regulilor), `data_file_error` (fișiere de date lipsă sau goale) și `auth_error` (login greșit), prinse în `main` și în meniul TUI.
+- În aplicație: opțiunea **[8] Alerte Inteligente** din meniul din terminal; în modul demo (`tastatura.txt`) alertele se afișează după sumar.
 
 ## Tema 3
 

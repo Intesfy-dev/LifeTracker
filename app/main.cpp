@@ -27,10 +27,22 @@
 #include "account_manager.h"
 #include "terminal_ui.h"
 #include "gui_window.h"
+#include "lt_exceptions.h"
+#include "reminder_center.h"
+#include "deadline_alert.h"
 
 #ifdef USE_QT_GUI
 #include <QApplication>
 #endif
+
+namespace {
+  // un fisier de date obligatoriu care e lipsa sau gol opreste demo-ul cu o exceptie (prinsa in main)
+  template<typename T>
+  void require_rows(const std::vector<T>& rows, const std::string& path, std::size_t min_rows = 1) {
+    if(rows.size() < min_rows)
+      throw data_file_error{path, "lipseste sau are mai putin de " + std::to_string(min_rows) + " rand(uri) valide"};
+  }
+}
 
 static int run_legacy_demo() {
     std::cout << std::boolalpha;
@@ -43,10 +55,7 @@ static int run_legacy_demo() {
     std::getline(user_file, user, ',');
     std::getline(user_file, pass, ',');
     user_file >> start >> sep >> balance;
-    if(!user_file){
-      std::cerr << "Cannot read data/user.txt\n";
-      return 1;
-    }
+    if(!user_file) throw data_file_error{"data/user.txt", "nu poate fi citit (format: user,parola,z.l.a,sold)"};
 
     std::vector<transaction> txs = load_all<transaction>("data/transactions.csv");
     std::vector<money_goal> goals = load_all<money_goal>("data/goals.csv");
@@ -55,10 +64,13 @@ static int run_legacy_demo() {
     std::vector<roadmap_node> nodes = load_all<roadmap_node>("data/roadmap.csv");
     std::vector<habit> habits = load_all<habit>("data/habits.csv");
     std::vector<workout_session> workouts = load_all<workout_session>("data/workouts.csv");
-    if(txs.empty() || goals.empty() || tasks.size() < 2 || events.empty() || nodes.empty() || habits.empty() || workouts.empty()){
-      std::cerr << "Missing or empty data files\n";
-      return 1;
-    }
+    require_rows(txs, "data/transactions.csv");
+    require_rows(goals, "data/goals.csv");
+    require_rows(tasks, "data/tasks.csv", 2);
+    require_rows(events, "data/events.csv");
+    require_rows(nodes, "data/roadmap.csv");
+    require_rows(habits, "data/habits.csv");
+    require_rows(workouts, "data/workouts.csv");
 
     // date
     std::cout << "Start: " << start << " (" << start.get_day() << "/" << start.get_month() << "/" << start.get_year() << ", " << start.weekday_name() << ", weekend: " << start.is_weekend() << ", Q" << start.quarter() << "), yesterday: " << start.yesterday() << ", tomorrow: " << start.tomorrow() << ", +5 days: " << start.add_days(5) << ", days until tomorrow: " << start.days_until(start.tomorrow()) << ", same day: " << start.same_day(start.tomorrow()) << ", same week: " << start.same_week(start.tomorrow()) << ", same month: " << start.same_month(start.tomorrow()) << ", same year: " << start.same_year(start.tomorrow()) << ", next billing: " << start.next_billing(start) << ", ics: " << start.ics_code() << "\n\n";
@@ -154,10 +166,7 @@ static int run_legacy_demo() {
     std::cout << "Login (user password): ";
     std::cin >> typed_user >> typed_pass;
     std::cout << "\n";
-    if(!app.login(typed_user, typed_pass)){
-      std::cout << "Wrong credentials\n";
-      return 1;
-    }
+    if(!app.login(typed_user, typed_pass)) throw auth_error{typed_user};
 
     transaction new_tx;
     if(read_item("New transaction (title,category,d.m.y,amount,subscription,win): ", new_tx)) app.add_transaction(new_tx);
@@ -177,6 +186,24 @@ static int run_legacy_demo() {
     std::cout << "\n";
     for(int i = 0; i < days; i++) app.next_day();
     app.summary();
+
+    // alerte inteligente (Tema 2: ierarhia reminder_rule apelata prin pointeri de baza)
+    reminder_center alerts = reminder_center::with_defaults();
+    try {
+      alerts.add_rule(deadline_alert{-2});  // configurare gresita: zile negative
+    } catch(const invalid_value_error& e) {
+      std::cout << "Regula respinsa: " << e.what() << "\n";
+    }
+    alerts.add_rule(deadline_alert{7});
+    reminder_center before_adapt{alerts};  // constructor de copiere (clone pe fiecare regula)
+    const int tightened = alerts.adapt_to_forecast(app, 3);
+    std::cout << "Reguli de buget inasprite dupa prognoza pe 3 luni: " << tightened << "\n";
+    if(tightened > 0) std::cout << "Inainte:\n" << before_adapt;
+    before_adapt = alerts;  // operator= (copy and swap)
+    std::cout << alerts << "Reguli active in total: " << reminder_rule::live_rules() << " (" << before_adapt.size() << " in copie)\n";
+    for(const std::string& msg : alerts.run_all(app)) std::cout << "  " << msg << "\n";
+    std::cout << "\n";
+
     std::cout << app << "\n";
 
     return 0;
@@ -210,7 +237,18 @@ int main(int argc, const char* const argv[]) {
     }
 
     if (force_cli) {
-        return run_legacy_demo();
+        try {
+            return run_legacy_demo();
+        } catch (const auth_error& e) {
+            std::cout << e.what() << "\n";
+            return 1;
+        } catch (const data_file_error& e) {
+            std::cerr << e.what() << "\nVerifica folderul data/ (lipseste: " << e.get_path() << ")\n";
+            return 1;
+        } catch (const lifetracker_error& e) {
+            std::cerr << "Eroare: " << e.what() << "\n";
+            return 1;
+        }
     }
 
     account_manager mgr{"data"};
